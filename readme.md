@@ -113,3 +113,63 @@ To evaluate the model run:
 ```
 python3 train.py -t <training data folder> -v <validation data folder> -m <model folder> -n <model name>
 ```
+The model with the added category of 'tire-screech' has a Hamming loss of 0.31 and the following confusion matrix:
+
+![Confusion matrix model with tire screech](results/model-with-tire-screech.png)
+
+## 5. Usage
+
+### 5.1 GUI tool
+The script `record_audio_gui.py` shows a GUI figure with the spectrogram, volume, the estimated class probabilities and buttons to stop and start storing the audio files.
+
+When storing sounds, it will only store sounds if the peak volume exceeds the set threshold. It also stores additional information about the file in a json file included in the store folder.
+
+```
+python record_audio_gui.py -m <model filepath> -c <classes file filepath> -s <store sounds> -t <threshold> -l <store location>
+```
+With
+ * `<model filepath>` The filepath of the .h5 model for spectrogram classification. (default: models/model_with_tire_screech.h5)
+ * `<classes file filepath>` The filepath of the json file containing a list of class names. (default: models/ class_names_with_tire_screech.json)
+ * `<store sounds>` Store the recordings that exceeded the volume threshold? ("y"/"n", default: "n")
+ * `<threshold>` The volume threshold above which sounds will be stored if store is enabled. (number, default: -30)
+ * `<store location>` The location where to store sounds if store is enabled. (default: stored/)
+
+This script is quite demanding for small devices like a raspberry pi. It is adviced to start with this script to test if the audio is working and to choose a suitable volume threshold for storing sounds and then use the next script to start a longer recording:
+
+### 5.2 CLI tool
+The script `record_audio_cli.py` does the same but without a GUI window. Usage:
+
+```
+python record_audio_cli.py -m <model filepath> -c <classes file filepath> -s <store sounds> -t <threshold> -l <store location>
+```
+With
+ * `<model filepath>` The filepath of the .h5 model for spectrogram classification. (default: models/model_with_tire_screech.h5)
+ * `<classes file filepath>` The filepath of the json file containing a list of class names. (default: models/ class_names_with_tire_screech.json)
+ * `<store sounds>` Store the recordings that exceeded the volume threshold? ("y"/"n", default: "n")
+ * `<threshold>` The volume threshold above which sounds will be stored if store is enabled. (number, default: -30)
+ * `<store location>` The location where to store sounds if store is enabled. (default: stored/)
+
+## 6. Adding a sound
+The model is hardwired to predict a fixed number of categories. So to add a category, we retrain the whole model with the following steps.
+
+We tested this procedure with a new sound class 'tire screech'. See **step 3** of [steps_taken.md](steps_taken.md) for an evaluation of this process.
+
+### 6.1 Data collection
+Collect sounds (wav or mp3) and put them in a new folder in the organized audio data directory (default `data/audio`). Name the folder according to the class name.
+
+Ideally the sounds are longer than 4 seconds and contain only the relevant sound. Shorter samples will be padded and longer samples will be cut in 4 seconds pieces in the next step. If the audio recordings contain long stretches of silence or other sounds, this will pollute the dataset with wrong sound samples.
+
+Try to get sounds from different sources. As a test, we collected 91 sound recordings from three sources:
+ * freesound.org
+ * youtube
+ * netflix
+It took approximately 4 manhours to collect, filter and cutout the 91 samples.
+
+### 6.2 Data preprocessing
+To generate images from the sounds, rerun the script `load_data.py` from **step 2.3**. It will detect new sounds, convert them to spectrograms ad store them in a new class folder in the spectrograms folder.
+
+### 6.3 Split data
+Move a small part (10%) of your new class spectrograms to a folder with the same name in the validation directory (default `data/spectrograms-test/`) to validate the model on.
+
+### 6.4 Retrain model
+Run `train.py` with the appropriate parameters (best to specify a new model name, to not overwrite the original one) to retrain the model.
